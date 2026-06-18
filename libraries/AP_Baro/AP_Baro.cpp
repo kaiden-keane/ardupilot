@@ -101,7 +101,7 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @DisplayName: ground temperature
     // @Description: User provided ambient ground temperature in degrees Celsius. This is used to improve the calculation of the altitude the vehicle is at. This parameter is not persistent and will be reset to 0 every time the vehicle is rebooted. A value of 0 means use the internal measurement ambient temperature.
     // @Units: degC
-    // @Increment: 1
+    // @Increment: 0.1
     // @Volatile: True
     // @User: Advanced
     AP_GROUPINFO("_GND_TEMP", 3, AP_Baro, _user_ground_temperature, 0),
@@ -253,6 +253,15 @@ const AP_Param::GroupInfo AP_Baro::var_info[] = {
     // @User: Advanced
     AP_GROUPINFO("_OPTIONS", 24, AP_Baro, _options, 0),
 #endif
+#ifndef HAL_BUILD_AP_PERIPH
+    // @Param: _GND_HUMID
+    // @DisplayName: ground relative humidity
+    // @Description: User provided ground relative humidity as a percentage between 0 and 1
+    // @Increment: 0.001
+    // @Range: 0 1
+    // @User: Advanced
+    AP_GROUPINFO("_GND_HUMID", 25, AP_Baro, _user_ground_rel_humidity, 0),
+#endif // HAL_BUILD_AP_PERIPH
     
     AP_GROUPEND
 };
@@ -429,6 +438,14 @@ float AP_Baro::get_ground_temperature(void) const
     }
 }
 
+/*
+  returns the relative humidity, from 0 to 1. Either user inputted
+  or defaults to zero
+*/
+float AP_Baro::get_ground_rel_humidity(void) const
+{
+    return _user_ground_rel_humidity;
+}
 
 /*
   set external temperature to be used for calibration (degrees C)

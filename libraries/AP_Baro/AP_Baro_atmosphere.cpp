@@ -72,6 +72,7 @@ float AP_Baro::get_altitude_difference_simple(float base_pressure, float pressur
 */
 static const float radius_earth = 6356.766E3;      // Earth's radius (in m)
 static const float R_specific = 287.053072;        // air specifc gas constant (J⋅kg−1⋅K−1) in 1976 model, R_universal / M_air;
+static const float R_vapour = 461.495;                  // specific gas constant for humid air, I forget where I got this, whoops
 
 static const struct {
     float amsl_m;       // geopotential height above mean sea-level (km')
@@ -244,6 +245,32 @@ float AP_Baro::get_EAS2TAS_extended(float altitude) const
 }
 
 /*
+   return current scale factor from measured data
+*/
+float AP_Baro::get_EAS2TAS_sensor(float altitude, float pressure) const
+{
+    const float tempc = get_ground_temperature() - ISA_LAPSE_RATE * altitude;
+    const float tempk = C_TO_KELVIN(tempc);
+    
+    // The August-Roche-Magnus Formula, this seems good for our temperature raange
+    // note: this is an estimation but its a pretty good estimation
+    const float tmpvar = 17.502 * tempc / (240.97 + tempc);
+    const float saturated_pressure_pa = 0.61121 * expf(tmpvar) * 1000;
+
+    const float rh = get_ground_rel_humidity();
+    const float vapour_pressure = saturated_pressure_pa * rh;   // humid
+    const float dry_pressure = pressure - vapour_pressure;      // dry
+
+    // combines the density of the the dry and vapour partial pressures
+    const float density = (dry_pressure / (R_specific * tempk)) + (vapour_pressure / (R_vapour * tempk));
+    const float eas2tas_squared = SSL_AIR_DENSITY / density;
+    if (!is_positive(eas2tas_squared)) {
+        return 1.0f;
+    }
+    return sqrtf(eas2tas_squared);
+}
+
+/*
   Given the geometric altitude (m)
   return scale factor that converts from equivalent to true airspeed
   used by SITL only
@@ -299,8 +326,9 @@ float AP_Baro::get_EAS2TAS_simple(float altitude, float pressure) const
 float AP_Baro::_get_EAS2TAS(void) const
 {
     const float altitude = get_altitude_AMSL();
-
-#if AP_BARO_1976_STANDARD_ATMOSPHERE_ENABLED
+#if AP_BARO_USE_SENSOR_EAS2TAS
+    return get_EAS2TAS_sensor(altitude, get_pressure());
+#elif AP_BARO_1976_STANDARD_ATMOSPHERE_ENABLED
     return get_EAS2TAS_extended(altitude);
 #else
     // otherwise use function

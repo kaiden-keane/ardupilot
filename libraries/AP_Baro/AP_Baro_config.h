@@ -12,6 +12,11 @@
 #define AP_BARO_ENABLED 1
 #endif
 
+// used for air density calculation using temp and humidity
+#ifndef AP_BARO_USE_SENSOR_EAS2TAS
+#define AP_BARO_USE_SENSOR_EAS2TAS 1
+#endif
+
 // backend support:
 #ifndef AP_BARO_BACKEND_DEFAULT_ENABLED
 #define AP_BARO_BACKEND_DEFAULT_ENABLED 1

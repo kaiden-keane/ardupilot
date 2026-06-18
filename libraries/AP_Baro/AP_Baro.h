@@ -153,6 +153,9 @@ public:
     // the ground values are only valid after calibration
     float get_ground_temperature(void) const;
 
+    // ground relative humidity as a range from 0 to 1
+    float get_ground_rel_humidity(void) const;
+
     // ground pressure in Pascal
     // the ground values are only valid after calibration
     float get_ground_pressure(void) const { return get_ground_pressure(_primary); }
@@ -313,6 +316,7 @@ private:
     DerivativeFilterFloat_Size7         _climb_rate_filter;
     AP_Float                            _specific_gravity; // the specific gravity of fluid for an ROV 1.00 for freshwater, 1.024 for salt water
     AP_Float                            _user_ground_temperature; // user override of the ground temperature used for EAS2TAS
+    AP_Float                            _user_ground_rel_humidity; // user specified relative humidity between 0 and 1
     float                               _guessed_ground_temperature; // currently ground temperature estimate using our best available source
 
     // when did we last notify the GCS of new pressure reference?
@@ -354,6 +358,7 @@ private:
 
     float get_altitude_difference_simple(float base_pressure, float pressure) const;
     float get_EAS2TAS_simple(float altitude, float pressure) const;
+    float get_EAS2TAS_sensor(float altitude, float pressure) const;
 };
 
 namespace AP {
