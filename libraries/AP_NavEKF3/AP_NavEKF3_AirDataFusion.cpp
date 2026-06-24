@@ -510,6 +510,16 @@ void NavEKF3_core::FuseDragForces()
     const Vector3F rel_wind_earth(vn - vwn, ve - vwe, vd);
     const Vector3F rel_wind_body = prevTnb * rel_wind_earth;
 
+    // save calculations so we can log them
+    ftype airspeed_x = 0.0f;
+    ftype airspeed_y = 0.0f;
+    ftype kacc_x = 0.0f;
+    ftype kacc_y = 0.0f;
+    ftype pred_accel_x = 0.0f;
+    ftype pred_accel_y = 0.0f;
+    ftype mea_acc_x = 0.0f;
+    ftype mea_acc_y = 0.0f;
+
     // perform sequential fusion of XY specific forces
     for (uint8_t axis_index = 0; axis_index < 2; axis_index++) {
         // correct accel data for bias
@@ -523,6 +533,7 @@ void NavEKF3_core::FuseDragForces()
         const ftype dragForceSign = is_positive(rel_wind_body[axis_index]) ? -1.0f : 1.0f;
 
         if (axis_index == 0) {
+            mea_acc_x = mea_acc;
             // drag can be modelled as an arbitrary  combination of bluff body drag that proportional to
             // speed squared, and rotor momentum drag that is proportional to speed.
             ftype Kaccx; // Derivative of specific force wrt airspeed
@@ -531,16 +542,9 @@ void NavEKF3_core::FuseDragForces()
                 const ftype airSpd = (bcoef_x / rho) * (- mcoef + sqrtF(sq(mcoef) + 2.0f * (rho / bcoef_x) * fabsF(mea_acc)));
                 Kaccx = fmaxF(1e-1f, (rho / bcoef_x) * airSpd + mcoef * density_ratio);
                 predAccel = (0.5f / bcoef_x) * rho * sq(rel_wind_body[0]) * dragForceSign - rel_wind_body[0] * mcoef * density_ratio;
-                AP::logger().Write("ZZX", "TimeUS,airSpd,vx,kaccx,predAccel,mea_acc,rho,dens_ratio", "Qfffffff",
-                    AP_HAL::micros64(),
-                    rel_wind_body[0],
-                    airSpd,
-                    Kaccx,
-                    predAccel,
-                    mea_acc,
-                    rho,
-                    density_ratio);
-
+                airspeed_x = airSpd;
+                kacc_x = Kaccx;
+                pred_accel_x = predAccel;
             } else if (using_mcoef) {
                 // propeller momentum drag only
                 Kaccx = fmaxF(1e-1f, mcoef * density_ratio);
@@ -616,6 +620,7 @@ void NavEKF3_core::FuseDragForces()
 
 
         } else if (axis_index == 1) {
+            mea_acc_y = mea_acc;
             // drag can be modelled as an arbitrary combination of bluff body drag that proportional to
             // speed squared, and rotor momentum drag that is proportional to speed.
             ftype Kaccy; // Derivative of specific force wrt airspeed
@@ -624,15 +629,9 @@ void NavEKF3_core::FuseDragForces()
                 const ftype airSpd = (bcoef_y / rho) * (- mcoef + sqrtF(sq(mcoef) + 2.0f * (rho / bcoef_y) * fabsF(mea_acc)));
                 Kaccy = fmaxF(1e-1f, (rho / bcoef_y) * airSpd + mcoef * density_ratio);
                 predAccel = (0.5f / bcoef_y) * rho * sq(rel_wind_body[1]) * dragForceSign - rel_wind_body[1] * mcoef * density_ratio;
-                AP::logger().Write("ZZY", "TimeUS,airSpd,vy,kaccy,predAccel,mea_acc,rho,dens_ratio", "Qfffffff",
-                    AP_HAL::micros64(),
-                    airSpd,
-                    rel_wind_body[1],
-                    Kaccy,
-                    fabsF(predAccel),
-                    mea_acc,
-                    rho,
-                    density_ratio);
+                airspeed_y = airSpd;
+                kacc_y = Kaccy;
+                pred_accel_y = predAccel;
             } else if (using_mcoef) {
                 // propeller momentum drag only
                 Kaccy = fmaxF(1e-1f, mcoef * density_ratio);
@@ -759,6 +758,24 @@ void NavEKF3_core::FuseDragForces()
 
     // record time of successful fusion
     lastDragPassTime_ms = imuSampleTime_ms;
+    // log the values we used
+    AP::logger().Write("ZZZ",
+        "TimeUS,C,vax,vay,vx,vy,kax,kay,pax,pay,max,may,rho",
+        "QBfffffffffff",
+        AP_HAL::micros64(),
+        DAL_CORE(core_index),
+        airspeed_x,
+        airspeed_y,
+        rel_wind_body[0],
+        rel_wind_body[1],
+        kacc_x,
+        kacc_y,
+        pred_accel_x,
+        pred_accel_y,
+        mea_acc_x,
+        mea_acc_y,
+        rho);
+
 }
 #endif // EK3_FEATURE_DRAG_FUSION
 
