@@ -4,6 +4,8 @@
 #include "AP_NavEKF3_core.h"
 #include <AP_DAL/AP_DAL.h>
 
+#include <AP_Logger/AP_Logger.h>
+
 /********************************************************
 *                   RESET FUNCTIONS                     *
 ********************************************************/
@@ -529,6 +531,16 @@ void NavEKF3_core::FuseDragForces()
                 const ftype airSpd = (bcoef_x / rho) * (- mcoef + sqrtF(sq(mcoef) + 2.0f * (rho / bcoef_x) * fabsF(mea_acc)));
                 Kaccx = fmaxF(1e-1f, (rho / bcoef_x) * airSpd + mcoef * density_ratio);
                 predAccel = (0.5f / bcoef_x) * rho * sq(rel_wind_body[0]) * dragForceSign - rel_wind_body[0] * mcoef * density_ratio;
+                AP::logger().Write("ZZX", "TimeUS,airSpd,vx,kaccx,predAccel,mea_acc,rho,dens_ratio", "Qfffffff",
+                    AP_HAL::micros64(),
+                    rel_wind_body[0],
+                    airSpd,
+                    Kaccx,
+                    predAccel,
+                    mea_acc,
+                    rho,
+                    density_ratio);
+
             } else if (using_mcoef) {
                 // propeller momentum drag only
                 Kaccx = fmaxF(1e-1f, mcoef * density_ratio);
@@ -612,6 +624,15 @@ void NavEKF3_core::FuseDragForces()
                 const ftype airSpd = (bcoef_y / rho) * (- mcoef + sqrtF(sq(mcoef) + 2.0f * (rho / bcoef_y) * fabsF(mea_acc)));
                 Kaccy = fmaxF(1e-1f, (rho / bcoef_y) * airSpd + mcoef * density_ratio);
                 predAccel = (0.5f / bcoef_y) * rho * sq(rel_wind_body[1]) * dragForceSign - rel_wind_body[1] * mcoef * density_ratio;
+                AP::logger().Write("ZZY", "TimeUS,airSpd,vy,kaccy,predAccel,mea_acc,rho,dens_ratio", "Qfffffff",
+                    AP_HAL::micros64(),
+                    airSpd,
+                    rel_wind_body[1],
+                    Kaccy,
+                    fabsF(predAccel),
+                    mea_acc,
+                    rho,
+                    density_ratio);
             } else if (using_mcoef) {
                 // propeller momentum drag only
                 Kaccy = fmaxF(1e-1f, mcoef * density_ratio);

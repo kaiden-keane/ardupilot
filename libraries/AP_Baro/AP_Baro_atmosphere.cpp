@@ -325,14 +325,17 @@ float AP_Baro::get_EAS2TAS_simple(float altitude, float pressure) const
 */
 float AP_Baro::_get_EAS2TAS(void) const
 {
-    const float altitude = get_altitude_AMSL();
 #if AP_BARO_USE_SENSOR_EAS2TAS
+    const float altitude = get_altitude(); // we want just altitude above the ground
     return get_EAS2TAS_sensor(altitude, get_pressure());
-#elif AP_BARO_1976_STANDARD_ATMOSPHERE_ENABLED
+#else
+    const float altitude = get_altitude_AMSL();
+#if AP_BARO_1976_STANDARD_ATMOSPHERE_ENABLED
     return get_EAS2TAS_extended(altitude);
 #else
     // otherwise use function
     return get_EAS2TAS_simple(altitude, get_pressure());
+#endif
 #endif
 }
 
